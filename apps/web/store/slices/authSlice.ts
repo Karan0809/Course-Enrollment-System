@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { UserRole } from '@course-enrollment-system/contracts';
 
 export type AuthUser = {
+  id: string;
   _id: string;
   name: string;
   email: string;

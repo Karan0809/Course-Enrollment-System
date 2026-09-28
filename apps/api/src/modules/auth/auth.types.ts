@@ -1,6 +1,7 @@
 import type { UserRole } from '../users/user.types.js';
 
 export type AuthenticatedUser = {
+  id: string;
   _id: string;
   name: string;
   email: string;

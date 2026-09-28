@@ -8,6 +8,7 @@ import { setHydrationError, restoreToken, setUnauthenticated } from '../store/sl
 import { getApiErrorMessage } from '../lib/api/errorMessage';
 import { readAccessToken } from '../lib/auth/storage';
 import { AppShell } from '../components/layout/AppShell';
+import { clearPersistedAccessToken } from '../lib/auth/storage';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -30,11 +31,20 @@ function SessionHydrator({ children }: { children: React.ReactNode }) {
     store.dispatch(restoreToken(token));
     store.dispatch(
       apiSlice.endpoints.getCurrentUser.initiate(undefined, { forceRefetch: true }),
-    ).unwrap().catch((error: unknown) => {
+    ).unwrap().then(() => {
+      // Session restored successfully.
+    }).catch((error: unknown) => {
       const status = typeof error === 'object' && error !== null && 'status' in error
         ? error.status
         : undefined;
-      if (status !== 401) store.dispatch(setHydrationError(getApiErrorMessage(error)));
+
+      if (status === 401) {
+        clearPersistedAccessToken();
+        store.dispatch(setUnauthenticated());
+        return;
+      }
+
+      store.dispatch(setHydrationError(getApiErrorMessage(error)));
     });
   }, []);
 

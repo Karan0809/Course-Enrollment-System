@@ -42,7 +42,7 @@ export async function meController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const userId = req.user?._id;
+    const userId = req.user?._id ?? req.user?.id;
 
     if (!userId) {
       throw createAppError('Authentication required', 401);

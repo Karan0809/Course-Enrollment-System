@@ -47,6 +47,7 @@ export function ProtectedRoute({
 
   if (status === 'unauthenticated') return <LoadingState label="Taking you to sign in" />;
   if (roles && user && !roles.includes(user.role)) return <UnauthorizedState />;
+  if (roles && !user) return <LoadingState label="Loading your account" />;
 
   return <>{children}</>;
 }

@@ -53,15 +53,6 @@ export const apiSlice = createApi({
     register: builder.mutation<AuthResponseData, RegisterRequest>({
       query: (body) => ({ url: 'auth/register', method: 'POST', body }),
       transformResponse: (response: ApiSuccess<AuthResponseData>) => response.data,
-      async onQueryStarted(_request, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-          persistAccessToken(data.token);
-          dispatch(setSession(data));
-        } catch {
-          // The form presents the RTK Query error to the user.
-        }
-      },
     }),
     getCurrentUser: builder.query<AuthUser, void>({
       query: () => 'auth/me',

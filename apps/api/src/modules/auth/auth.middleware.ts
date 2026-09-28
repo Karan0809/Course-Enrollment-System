@@ -12,11 +12,20 @@ export async function requireAuth(
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader) {
       throw createAppError('Authentication token is required', 401);
     }
 
-    const token = authHeader.replace('Bearer ', '').trim();
+    const match = /^Bearer\s+(.+)$/i.exec(authHeader.trim());
+    if (!match) {
+      throw createAppError('Malformed authorization header', 401);
+    }
+
+    const token = match[1]?.trim();
+    if (!token) {
+      throw createAppError('Malformed authorization header', 401);
+    }
+
     const payload = verifyToken(token);
     const user = await User.findById(payload.sub);
 

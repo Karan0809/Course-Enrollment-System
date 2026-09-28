@@ -16,7 +16,7 @@ function validate(values: FormValues, mode: AuthMode): Partial<FormValues> {
   if (mode === 'register' && !values.name.trim()) errors.name = 'Enter your name.';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) errors.email = 'Enter a valid email address.';
   if (!values.password) errors.password = 'Enter your password.';
-  else if (mode === 'register' && values.password.length < 6) errors.password = 'Use at least 6 characters.';
+  else if (values.password.length < 6) errors.password = 'Use at least 6 characters.';
   return errors;
 }
 
@@ -27,6 +27,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   const [values, setValues] = useState<FormValues>({ name: '', email: '', password: '' });
   const [fieldErrors, setFieldErrors] = useState<Partial<FormValues>>({});
   const [formError, setFormError] = useState('');
+  const [formSuccess, setFormSuccess] = useState('');
   const isRegister = mode === 'register';
   const isSubmitting = loginState.isLoading || registerState.isLoading;
 
@@ -35,12 +36,29 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     const errors = validate(values, mode);
     setFieldErrors(errors);
     setFormError('');
+    setFormSuccess('');
     if (Object.keys(errors).length > 0) return;
 
     try {
-      const response: AuthResponseData = isRegister
-        ? await register({ name: values.name.trim(), email: values.email.trim(), password: values.password }).unwrap()
-        : await login({ email: values.email.trim(), password: values.password }).unwrap();
+      if (isRegister) {
+        await register({
+          name: values.name.trim(),
+          email: values.email.trim(),
+          password: values.password,
+        }).unwrap();
+
+        setFormSuccess('Account created successfully. Redirecting to login…');
+        setTimeout(() => {
+          router.replace('/login');
+        }, 700);
+        return;
+      }
+
+      const response: AuthResponseData = await login({
+        email: values.email.trim(),
+        password: values.password,
+      }).unwrap();
+
       router.replace(getRoleRedirect(response.user.role));
     } catch (error) {
       setFormError(getApiErrorMessage(error));
@@ -51,6 +69,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     setValues((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: undefined }));
     setFormError('');
+    setFormSuccess('');
   }
 
   return (
@@ -87,6 +106,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
             {fieldErrors.password ? <small className="field-error">{fieldErrors.password}</small> : null}
           </label>
           {formError ? <p className="form-error" role="alert">{formError}</p> : null}
+          {formSuccess ? <p className="form-success" role="status">{formSuccess}</p> : null}
           <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Please wait…' : isRegister ? 'Create student account' : 'Sign in'}
             <span aria-hidden="true">↗</span>

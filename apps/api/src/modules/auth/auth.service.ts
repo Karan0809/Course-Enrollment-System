@@ -13,8 +13,11 @@ export function serializeUser(user: {
   createdAt: Date;
   updatedAt: Date;
 }): AuthenticatedUser {
+  const id = typeof user._id === 'string' ? user._id : user._id.toString();
+
   return {
-    _id: typeof user._id === 'string' ? user._id : user._id.toString(),
+    id,
+    _id: id,
     name: user.name,
     email: user.email,
     role: user.role,
@@ -33,13 +36,13 @@ export async function registerUser(input: RegisterRequestBody): Promise<AuthResp
     throw createAppError('Name, email, and password are required', 400);
   }
 
-  if (password.length < 6) {
-    throw createAppError('Password must be at least 6 characters long', 400);
-  }
-
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailPattern.test(email)) {
     throw createAppError('Please provide a valid email address', 400);
+  }
+
+  if (password.length < 6) {
+    throw createAppError('Password must be at least 6 characters long', 400);
   }
 
   const existingUser = await User.findOne({ email });
@@ -51,7 +54,7 @@ export async function registerUser(input: RegisterRequestBody): Promise<AuthResp
     name,
     email,
     passwordHash: await hashPassword(password),
-    role: input.role ?? 'student',
+    role: 'student' as const,
     isActive: true,
   });
 
@@ -71,9 +74,18 @@ export async function loginUser(input: LoginRequestBody): Promise<AuthResponse> 
     throw createAppError('Email and password are required', 400);
   }
 
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(email)) {
+    throw createAppError('Please provide a valid email address', 400);
+  }
+
   const user = await User.findOne({ email });
   if (!user) {
     throw createAppError('Invalid email or password', 401);
+  }
+
+  if (!user.isActive) {
+    throw createAppError('User account is inactive', 401);
   }
 
   const isPasswordValid = await comparePassword(password, user.passwordHash);
