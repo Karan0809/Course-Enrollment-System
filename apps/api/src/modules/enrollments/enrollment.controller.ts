@@ -5,6 +5,9 @@ import {
   listAllEnrollments,
   listCourseEnrollments,
   listStudentEnrollments,
+  listStudentEnrollmentDetails,
+  listTeacherCourseStudents,
+  listAdminEnrollmentDetails,
 } from './enrollment.service.js';
 import {
   parseCourseIdParam,
@@ -30,6 +33,29 @@ export async function createEnrollmentController(
     });
   } catch (error) {
     next(error instanceof Error ? error : createAppError('Unable to create enrollment'));
+  }
+}
+
+export async function createCourseEnrollmentController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const student = req.user;
+    if (!student) throw createAppError('Authentication required', 401);
+    const courseId = parseCourseIdParam(req.params.id);
+    const enrollment = await createStudentEnrollment(student, courseId);
+    res.status(201).json({ success: true, message: 'Enrollment created successfully', data: { enrollment } });
+  } catch (error) {
+    next(error instanceof Error ? error : createAppError('Unable to create enrollment'));
+  }
+}
+
+export async function getStudentEnrollmentDetailsController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const student = req.user;
+    if (!student) throw createAppError('Authentication required', 401);
+    const enrollments = await listStudentEnrollmentDetails(student);
+    res.status(200).json({ success: true, message: 'Enrollments retrieved successfully', data: { enrollments } });
+  } catch (error) {
+    next(error instanceof Error ? error : createAppError('Unable to retrieve enrollments'));
   }
 }
 
@@ -89,5 +115,27 @@ export async function getCourseEnrollmentsController(
     });
   } catch (error) {
     next(error instanceof Error ? error : createAppError('Unable to retrieve course enrollments'));
+  }
+}
+
+export async function getTeacherCourseStudentsController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const teacher = req.user;
+    if (!teacher) throw createAppError('Authentication required', 401);
+    const courseId = parseCourseIdParam(req.params.id);
+    const enrollments = await listTeacherCourseStudents(teacher, courseId);
+    res.status(200).json({ success: true, message: 'Course students retrieved successfully', data: { enrollments } });
+  } catch (error) {
+    next(error instanceof Error ? error : createAppError('Unable to retrieve course students'));
+  }
+}
+
+export async function getAdminEnrollmentDetailsController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const filters = parseEnrollmentListFilters(req.query as Record<string, unknown>);
+    const enrollments = await listAdminEnrollmentDetails(filters);
+    res.status(200).json({ success: true, message: 'Enrollments retrieved successfully', data: { enrollments } });
+  } catch (error) {
+    next(error instanceof Error ? error : createAppError('Unable to retrieve enrollments'));
   }
 }

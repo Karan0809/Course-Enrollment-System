@@ -6,7 +6,26 @@ import {
   listUsers,
   updateUserById,
   updateUserStatus,
+  getAdminDashboardSummary,
 } from './user.service.js';
+
+export async function deactivateUserController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const user = await updateUserStatus(getUserIdParam(req), false);
+    res.status(200).json({ success: true, message: 'User deactivated successfully', data: user });
+  } catch (error) {
+    next(error instanceof Error ? error : createAppError('Unable to deactivate user', 400));
+  }
+}
+
+export async function adminDashboardSummaryController(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const summary = await getAdminDashboardSummary();
+    res.status(200).json({ success: true, message: 'Dashboard summary retrieved successfully', data: summary });
+  } catch (error) {
+    next(error instanceof Error ? error : createAppError('Unable to fetch dashboard summary', 500));
+  }
+}
 
 function getUserIdParam(req: Request): string {
   const userId = req.params.id;

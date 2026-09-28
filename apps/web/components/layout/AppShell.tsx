@@ -17,6 +17,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
         <nav className="header-nav" aria-label="Main navigation">
           <Link href="/courses">Courses</Link>
+          {status === 'authenticated' && user?.role === 'admin' ? <><Link href="/admin">Dashboard</Link><Link href="/admin/users">Users</Link><Link href="/admin/courses">Manage courses</Link><Link href="/admin/enrollments">Enrollments</Link></> : null}
+          {status === 'authenticated' && user?.role === 'teacher' ? <Link href="/teacher/courses">Teacher courses</Link> : null}
+          {status === 'authenticated' && user?.role === 'student' ? <Link href="/student/my-courses">My courses</Link> : null}
           {status === 'authenticated' && user ? (
             <div className="account-nav">
               <span className="account-label">{user.name}<small>{user.role}</small></span>

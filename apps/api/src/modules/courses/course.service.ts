@@ -154,6 +154,11 @@ export async function listCourses(user: AuthenticatedUser | null | undefined, qu
   return courses.map(serializeCourse);
 }
 
+export async function listTeacherCourses(user: AuthenticatedUser): Promise<CourseSummary[]> {
+  const courses = await Course.find({ teacherId: user.id }).sort({ createdAt: -1 });
+  return courses.map(serializeCourse);
+}
+
 export async function getCourseById(courseId: string, user: AuthenticatedUser | null | undefined): Promise<CourseSummary> {
   if (!isValidCourseId(courseId)) {
     throw createAppError('Invalid course id', 400);
@@ -195,6 +200,14 @@ export async function createCourse(input: CourseInput): Promise<CourseSummary> {
   const rawDuration = typeof input.duration === 'number' ? input.duration : 0;
   const level = input.level;
   const status = input.status ?? 'draft';
+
+  if (typeof input.isFree !== 'boolean') {
+    throw createAppError('isFree must be a boolean value', 400);
+  }
+
+  if (input.isActive !== undefined && typeof input.isActive !== 'boolean') {
+    throw createAppError('isActive must be a boolean value', 400);
+  }
 
   if (!title) {
     throw createAppError('Title is required', 400);
@@ -239,7 +252,7 @@ export async function createCourse(input: CourseInput): Promise<CourseSummary> {
     description,
     teacherId,
     price: rawPrice,
-    isFree: Boolean(input.isFree ?? (rawPrice === 0)),
+    isFree: input.isFree,
     duration: rawDuration,
     level,
     status,
@@ -262,6 +275,14 @@ export async function updateCourseById(courseId: string, input: CourseInput, act
   if (actor.role === 'student') {
     throw createAppError('Forbidden: students cannot update courses', 403);
   }
+
+  if (input.teacherId !== undefined && typeof input.teacherId !== 'string') throw createAppError('teacherId must be a string', 400);
+  if (input.title !== undefined && typeof input.title !== 'string') throw createAppError('Title must be a string', 400);
+  if (input.description !== undefined && typeof input.description !== 'string') throw createAppError('Description must be a string', 400);
+  if (input.price !== undefined && typeof input.price !== 'number') throw createAppError('Price must be a number', 400);
+  if (input.isFree !== undefined && typeof input.isFree !== 'boolean') throw createAppError('isFree must be a boolean value', 400);
+  if (input.duration !== undefined && typeof input.duration !== 'number') throw createAppError('Duration must be a number', 400);
+  if (input.isActive !== undefined && typeof input.isActive !== 'boolean') throw createAppError('isActive must be a boolean value', 400);
 
   if (actor.role === 'teacher') {
     ensureTeacherOwnsCourse(actor, course);
@@ -306,7 +327,7 @@ export async function updateCourseById(courseId: string, input: CourseInput, act
   }
 
   if (input.price !== undefined) {
-    const nextPrice = Number(input.price);
+    const nextPrice = input.price;
     if (!Number.isFinite(nextPrice) || nextPrice < 0) {
       throw createAppError('Price must be a non-negative number', 400);
     }

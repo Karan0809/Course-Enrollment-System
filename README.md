@@ -1,170 +1,103 @@
 # Course Enrollment System
 
-A monorepo for a course enrollment platform built with a Next.js frontend, an Express API, and a shared TypeScript contracts package.
+A full-stack course catalogue and enrollment application for Students, Teachers, and Admins. Admins manage users and courses, Teachers manage permitted content on assigned courses and view their rosters, and Students browse the active catalogue and manage their own enrollments.
 
-## Project overview
+## Technology
 
-This repository is the foundation for a full-stack application with:
-
-- Frontend: Next.js App Router, TypeScript, Tailwind CSS, Redux Toolkit, RTK Query
-- Backend: Express.js with TypeScript
-- Shared contracts: Framework-independent TypeScript types
-- Database: MongoDB + Mongoose (Module 2 foundation only)
-- Authentication and RBAC are implemented in the backend as separate concerns
-
-## Authentication vs authorization
-
-- Authentication answers: “Who are you?”
-- Authorization answers: “What are you allowed to do?”
-
-The backend uses JWT-based authentication and a separate role-based authorization check based on the authenticated user loaded from the database.
-
-Supported roles:
-
-- admin
-- teacher
-- student
-
-HTTP status semantics:
-
-- 401 = unauthenticated or invalid authentication
-- 403 = authenticated but forbidden by role permissions
+- Frontend: Next.js 14 App Router, React, TypeScript, Tailwind CSS
+- Client state and API: Redux Toolkit and RTK Query
+- Backend: Node.js, Express, TypeScript, REST
+- Database: MongoDB and Mongoose
+- Repository: npm workspaces monorepo
 
 ## Repository structure
 
 ```text
-course-enrollment-system/
-├── apps/
-│   ├── web/
-│   └── api/
-├── packages/
-│   └── contracts/
-├── package.json
-├── tsconfig.base.json
-├── .gitignore
-├── README.md
-└── .env.example (if added at root in future)
+apps/api/       Express API, Mongoose models, seed and database checks
+apps/web/       Next.js application and RTK Query client
+packages/       shared TypeScript contracts
+docs/           API reference and assessment verification matrix
 ```
 
-## Technology stack
-
-- Node.js
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
-- Redux Toolkit
-- RTK Query
-- Express.js
-- MongoDB
-- Mongoose
-
-## Prerequisites
+## Requirements
 
 - Node.js 18 or newer
 - npm 9 or newer
-- MongoDB instance running locally or at a reachable URI
+- A reachable MongoDB instance
 
-## Installation
+## Install and configure
 
-```bash
+```sh
 npm install
 ```
 
-## Development commands
+Copy `apps/api/.env.example` to `apps/api/.env` and `apps/web/.env.example` to `apps/web/.env.local`. Set `MONGODB_URI` to your development database, choose a private random `JWT_SECRET` of at least 32 characters, and configure `NEXT_PUBLIC_API_URL` to the API URL. The frontend variable is public by design and must never contain backend secrets. Keep real `.env` files out of version control.
 
-```bash
-npm run dev
+Backend settings: `PORT`, `CORS_ORIGIN`, `MONGODB_URI`, `JWT_SECRET`, and `JWT_EXPIRES_IN`. `JWT_SECRET` is required in every environment, must be private and at least 32 characters, and the example placeholder is rejected at startup. Frontend setting: `NEXT_PUBLIC_API_URL`. Optional demo seed credentials are listed in the API environment example; the seed command requires all three demo identities.
+
+## Run locally
+
+Start MongoDB, then run each app in a separate terminal from the repository root:
+
+```sh
 npm run dev:api
+npm run dev
+```
+
+The API defaults to `http://localhost:4000`; the web app defaults to `http://localhost:3000`. `GET /health` reports API and database health.
+
+To run the compiled API, build the workspaces first and then start the API package:
+
+```sh
 npm run build
+npm start --workspace @course-enrollment-system/api
+```
+
+## Demo data
+
+The seed is explicit, development-only, and non-destructive: it creates missing demo identities, sample courses in draft/published/archived/inactive states, and one active enrollment. Existing records are reused and never have passwords or course fields overwritten. Set these values in `apps/api/.env` (use unique local credentials):
+
+```dotenv
+SEED_ADMIN_EMAIL=admin@example.test
+SEED_ADMIN_PASSWORD=use-a-private-password
+SEED_TEACHER_EMAIL=teacher@example.test
+SEED_TEACHER_PASSWORD=use-a-private-password
+SEED_STUDENT_EMAIL=student@example.test
+SEED_STUDENT_PASSWORD=use-a-private-password
+```
+
+Run the seed only when you intend to add or reuse those demo records:
+
+```sh
+npm run seed --workspace @course-enrollment-system/api
+```
+
+The command requires `SEED_CONFIRM=YES` in the environment and refuses to run when `NODE_ENV=production`. It never prints credentials. It is idempotent for its seeded identities, course titles, and enrollment.
+
+## Roles and application routes
+
+- Public: `/login`, `/register`, `/courses`, `/courses/:id`
+- Admin: `/admin`, `/admin/users`, `/admin/users/new`, `/admin/users/:id/edit`, `/admin/courses`, `/admin/courses/new`, `/admin/courses/:id/edit`, `/admin/enrollments`
+- Teacher: `/teacher/courses`, `/teacher/courses/:id`, `/teacher/courses/:id/students`
+- Student: `/student/my-courses`
+
+Public registration always creates a Student. Admin-created accounts can use the Admin, Teacher, or Student role. Backend middleware enforces roles and course ownership; frontend route protection and role-aware navigation are additional UX safeguards. Login sends each role to its starting page. The client persists the JWT in local storage and validates it through `/api/auth/me` on refresh; logout clears the token and cached API state.
+
+## API reference
+
+The full method/path/auth/body/response/error reference is in [docs/api.md](docs/api.md). Success responses use `{ success, message, data }`; errors use `{ success: false, message, data: {} }`. Protected calls use `Authorization: Bearer <token>`.
+
+## Checks
+
+```sh
 npm run typecheck
 npm run lint
+npm run build
+npm run db:check --workspace @course-enrollment-system/api
 ```
 
-## Environment setup
+There is no configured standalone unit-test runner. Final assessment runtime/API checks are recorded in [docs/assessment-requirements-matrix.md](docs/assessment-requirements-matrix.md). API/database checks and production builds are distinct from interactive browser verification. This environment currently has no usable browser automation, so visual rendering, browser console, hydration, and interaction checks must remain marked **BLOCKED** unless performed in a browser-equipped environment.
 
-Create local environment files from the examples:
+## Database behavior
 
-```bash
-cp apps/web/.env.example apps/web/.env.local
-cp apps/api/.env.example apps/api/.env
-```
-
-Backend environment variables:
-
-```bash
-PORT=4000
-CORS_ORIGIN=http://localhost:3000
-MONGODB_URI=mongodb://localhost:27017/course-enrollment-system
-```
-
-Frontend environment variables (`apps/web/.env.local`):
-
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:4000
-```
-
-The API base URL is read centrally by the RTK Query client. Do not place backend secrets in `NEXT_PUBLIC_*` variables.
-
-Set values as needed before running the applications.
-
-## Frontend URL
-
-- http://localhost:3000
-
-## Backend URL
-
-- http://localhost:4000
-
-## Frontend foundation
-
-The web app uses the existing Redux Toolkit store for client session state and RTK Query for backend data. The shared API client sends the current Bearer token when present, validates restored tokens through `GET /api/auth/me`, clears session/cache after protected API `401` responses, and treats `403` as an authorization error without logging out.
-
-The JWT alone is persisted in browser `localStorage` so a page refresh can restore the session; browser storage is accessed only in client-side code and is not treated as secure storage. Login and student registration are available at `/login` and `/register`. Role destinations are centralized as admin `/admin`, teacher `/teacher/courses`, and student `/courses`; current destination pages are foundation placeholders, not completed dashboards or course workflows. Protected UI guards improve navigation but do not replace backend authorization.
-
-Reusable loading, empty, error, and unauthorized states are under `apps/web/components/ui`. TypeScript API contracts follow the backend response shapes and shared role/course/enrollment types. No admin, teacher, or student business workflows are included in this frontend foundation module.
-
-## Health endpoint
-
-- GET http://localhost:4000/health
-
-Expected response shape:
-
-```json
-{
-  "success": true,
-  "message": "API is running",
-  "data": {
-    "status": "healthy"
-  }
-}
-```
-
-## Database architecture overview
-
-This module adds the persistence layer for the core domain models:
-
-- User: admin, teacher, student roles
-- Course: title, description, teacherId, duration, level, status
-- Enrollment: studentId, courseId, status, enrolledAt
-
-### Enrollment unique index
-
-The Enrollment model includes a compound unique index on `(studentId, courseId)` to enforce integrity at the database layer.
-
-### Enrollment APIs
-
-| Method | Endpoint | Access |
-| --- | --- | --- |
-| `POST` | `/api/enrollments` | Student |
-| `GET` | `/api/enrollments/me` | Student |
-| `GET` | `/api/enrollments` | Admin |
-| `GET` | `/api/enrollments/course/:courseId` | Teacher assigned to that course |
-
-Student enrollment requests accept `{ "courseId": "..." }`. The student identity is taken from the authenticated session, and the server always creates an `active` enrollment. Client-supplied `studentId` or `status` fields are rejected. A course must exist, be `published`, and be active. Repeated enrollment attempts, including attempts after a prior enrollment was cancelled, return `409`; the database unique index also prevents duplicates during concurrent requests.
-
-Students can retrieve only their own enrollments through `/api/enrollments/me`. Admins can list all enrollments and filter by `studentId`, `courseId`, or `status` (`active` or `cancelled`). Teachers can retrieve enrollment records only for courses assigned to them; another teacher's course returns `403`.
-
-Protected endpoints return `401` when authentication is missing, invalid, or belongs to an inactive account. Role and ownership violations return `403`; malformed IDs or filters return `400`; missing courses return `404`; duplicate enrollment conflicts return `409`.
-
-Enrollment cancellation, payments, notifications, progress tracking, certificates, and frontend enrollment flows are not implemented by this API module.
+Enrollment records include `studentId`, `courseId`, `status`, `enrolledAt`, and Mongoose timestamps. A unique compound index prevents duplicate student/course records. Students can enroll only in published active courses; cancellation is not implemented. See the API reference for filtering, ownership, and error semantics.

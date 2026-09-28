@@ -7,6 +7,7 @@ import {
   getUsersController,
   updateUserController,
   updateUserStatusController,
+  deactivateUserController,
 } from './user.controller.js';
 
 const router = Router();
@@ -17,5 +18,6 @@ router.get('/', getUsersController);
 router.get('/:id', getUserController);
 router.patch('/:id', updateUserController);
 router.patch('/:id/status', updateUserStatusController);
+router.delete('/:id', deactivateUserController);
 
 export default router;

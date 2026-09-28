@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import { User } from './users/user.model.js';
 import { Course } from './courses/course.model.js';
 import { Enrollment } from './enrollments/enrollment.model.js';
+import { pathToFileURL } from 'node:url';
+import { connectDatabase } from '../config/database.js';
 
 export async function verifyDatabaseSetup(): Promise<void> {
   const connectionState = mongoose.connection.readyState;
@@ -29,4 +31,15 @@ export async function verifyDatabaseSetup(): Promise<void> {
   if (!hasUniqueCompoundIndex) {
     throw new Error('Enrollment unique compound index is missing.');
   }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  connectDatabase()
+    .then(verifyDatabaseSetup)
+    .then(() => console.log('Database models and enrollment unique index verified.'))
+    .catch((error: unknown) => {
+      console.error(error instanceof Error ? error.message : 'Database verification failed.');
+      process.exitCode = 1;
+    })
+    .finally(() => mongoose.disconnect());
 }

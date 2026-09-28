@@ -27,6 +27,10 @@ export function serializeUser(user: {
   };
 }
 
+function isDuplicateKeyError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
+}
+
 export async function registerUser(input: RegisterRequestBody): Promise<AuthResponse> {
   const name = input.name?.trim();
   const email = input.email?.trim().toLowerCase();
@@ -50,13 +54,19 @@ export async function registerUser(input: RegisterRequestBody): Promise<AuthResp
     throw createAppError('A user with this email already exists', 409);
   }
 
-  const user = await User.create({
-    name,
-    email,
-    passwordHash: await hashPassword(password),
-    role: 'student' as const,
-    isActive: true,
-  });
+  let user;
+  try {
+    user = await User.create({
+      name,
+      email,
+      passwordHash: await hashPassword(password),
+      role: 'student' as const,
+      isActive: true,
+    });
+  } catch (error) {
+    if (isDuplicateKeyError(error)) throw createAppError('A user with this email already exists', 409);
+    throw error;
+  }
 
   const token = signToken({ _id: user._id.toString(), email: user.email, role: user.role });
 

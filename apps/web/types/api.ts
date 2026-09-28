@@ -49,6 +49,10 @@ export type UserSummary = {
   updatedAt: string;
 };
 
+export type AdminDashboardSummary = { teachers: number; students: number; courses: number; enrollments: number };
+export type CreateAdminUserRequest = { name: string; email: string; password: string; role: UserRole };
+export type UpdateAdminUserRequest = Partial<Pick<UserSummary, 'name' | 'email' | 'role' | 'isActive'>>;
+
 export type CourseSummary = {
   _id: string;
   title: string;
@@ -64,6 +68,20 @@ export type CourseSummary = {
   updatedAt: string;
 };
 
+export type CreateCourseRequest = {
+  title: string;
+  description: string;
+  teacherId: string;
+  price: number;
+  isFree: boolean;
+  duration: number;
+  level: CourseLevel;
+  status: CourseStatus;
+  isActive?: boolean;
+};
+export type UpdateCourseRequest = Partial<CreateCourseRequest>;
+export type TeacherCourseUpdateRequest = Pick<UpdateCourseRequest, 'title' | 'description' | 'price' | 'isFree' | 'duration' | 'level'>;
+
 export type EnrollmentSummary = {
   id: string;
   studentId: string;
@@ -71,3 +89,23 @@ export type EnrollmentSummary = {
   status: EnrollmentStatus;
   enrolledAt: string;
 };
+
+export type StudentEnrollment = EnrollmentSummary & {
+  createdAt: string;
+  updatedAt: string;
+  course: (Omit<CourseSummary, '_id' | 'createdAt' | 'updatedAt'> & { id: string }) | null;
+};
+export type TeacherCourseStudent = {
+  enrollmentId: string;
+  status: EnrollmentStatus;
+  enrolledAt: string;
+  student: { id: string; name: string; email: string; role: 'student'; isActive: boolean };
+};
+export type AdminEnrollment = {
+  id: string;
+  status: EnrollmentStatus;
+  enrolledAt: string;
+  student: { id: string; name: string; email: string; role: 'student'; isActive: boolean } | null;
+  course: { id: string; title: string; teacher: { id: string; name: string; email: string } | null } | null;
+};
+export type CreateEnrollmentResponse = { enrollment: EnrollmentSummary };

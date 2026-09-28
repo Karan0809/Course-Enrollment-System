@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "db:check": "tsx src/modules/database-verification.ts"
+    "db:check": "tsx src/modules/database-verification.ts",
+    "seed": "tsx src/seed.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

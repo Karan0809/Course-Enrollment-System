@@ -1,4 +1,6 @@
 import { User } from './user.model.js';
+import { Course } from '../courses/course.model.js';
+import { Enrollment } from '../enrollments/enrollment.model.js';
 import { createAppError } from '../../middlewares/errorHandler.js';
 import { hashPassword } from '../auth/auth.utils.js';
 import type { UserDocument, UserRole } from './user.types.js';
@@ -40,6 +42,10 @@ function serializeUser(user: UserDocument): UserSummary {
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
+}
+
+function isDuplicateKeyError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
 }
 
 export async function listUsers(query: UserListQuery = {}): Promise<UserSummary[]> {
@@ -89,7 +95,7 @@ export async function createUser(input: CreateUserInput): Promise<UserSummary> {
   const name = typeof input.name === 'string' ? input.name.trim() : '';
   const email = typeof input.email === 'string' ? normalizeEmail(input.email) : '';
   const password = typeof input.password === 'string' ? input.password : '';
-  const requestedRole = input.role ?? 'student';
+  const requestedRole = input.role;
 
   if (!name) {
     throw createAppError('Name is required', 400);
@@ -107,18 +113,28 @@ export async function createUser(input: CreateUserInput): Promise<UserSummary> {
     throw createAppError(`Role must be one of: ${validRoles.join(', ')}`, 400);
   }
 
+  if (input.isActive !== undefined && typeof input.isActive !== 'boolean') {
+    throw createAppError('isActive must be a boolean value', 400);
+  }
+
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     throw createAppError('A user with this email already exists', 409);
   }
 
-  const user = await User.create({
-    name,
-    email,
-    passwordHash: await hashPassword(password),
-    role: requestedRole,
-    isActive: input.isActive ?? true,
-  });
+  let user;
+  try {
+    user = await User.create({
+      name,
+      email,
+      passwordHash: await hashPassword(password),
+      role: requestedRole,
+      isActive: input.isActive ?? true,
+    });
+  } catch (error) {
+    if (isDuplicateKeyError(error)) throw createAppError('A user with this email already exists', 409);
+    throw error;
+  }
 
   return serializeUser(user);
 }
@@ -132,6 +148,11 @@ export async function updateUserById(userId: string, input: UpdateUserInput): Pr
   if (!user) {
     throw createAppError('User not found', 404);
   }
+
+  if (input.name !== undefined && typeof input.name !== 'string') throw createAppError('Name must be a string', 400);
+  if (input.email !== undefined && typeof input.email !== 'string') throw createAppError('Email must be a string', 400);
+  if (input.password !== undefined && typeof input.password !== 'string') throw createAppError('Password must be a string', 400);
+  if (input.isActive !== undefined && typeof input.isActive !== 'boolean') throw createAppError('isActive must be a boolean value', 400);
 
   const nextName = typeof input.name === 'string' ? input.name.trim() : undefined;
   const nextEmail = typeof input.email === 'string' ? normalizeEmail(input.email) : undefined;
@@ -174,7 +195,12 @@ export async function updateUserById(userId: string, input: UpdateUserInput): Pr
     user.isActive = input.isActive;
   }
 
-  await user.save();
+  try {
+    await user.save();
+  } catch (error) {
+    if (isDuplicateKeyError(error)) throw createAppError('A user with this email already exists', 409);
+    throw error;
+  }
 
   return serializeUser(user);
 }
@@ -194,4 +220,14 @@ export async function updateUserStatus(userId: string, isActive: boolean): Promi
   }
 
   return serializeUser(user);
+}
+
+export async function getAdminDashboardSummary(): Promise<{ teachers: number; students: number; courses: number; enrollments: number }> {
+  const [teachers, students, courses, enrollments] = await Promise.all([
+    User.countDocuments({ role: 'teacher' }),
+    User.countDocuments({ role: 'student' }),
+    Course.countDocuments(),
+    Enrollment.countDocuments(),
+  ]);
+  return { teachers, students, courses, enrollments };
 }

@@ -5,9 +5,22 @@ import {
   deleteCourseById,
   getCourseById,
   listCourses,
+  listTeacherCourses,
   updateCourseById,
   updateCourseStatus,
 } from './course.service.js';
+
+export async function getTeacherCoursesController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const teacher = req.user;
+    if (!teacher) throw createAppError('Authentication required', 401);
+    if (teacher.role !== 'teacher') throw createAppError('Forbidden: teacher access required', 403);
+    const courses = await listTeacherCourses(teacher);
+    res.status(200).json({ success: true, message: 'Assigned courses retrieved successfully', data: courses });
+  } catch (error) {
+    next(error instanceof Error ? error : createAppError('Unable to fetch assigned courses', 500));
+  }
+}
 
 function getCourseIdParam(req: Request): string {
   const courseId = req.params.id;
