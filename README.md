@@ -44,7 +44,7 @@ npm run dev:api
 npm run dev
 ```
 
-The API defaults to `http://localhost:4000`; the web app defaults to `http://localhost:3000`. `GET /health` reports API and database health.
+The API defaults to `http://localhost:4000`; the web app defaults to `http://localhost:3000`. `GET /health` is an API liveness response; it does not check database readiness.
 
 To run the compiled API, build the workspaces first and then start the API package:
 
@@ -83,9 +83,21 @@ The command requires `SEED_CONFIRM=YES` in the environment and refuses to run wh
 
 Public registration always creates a Student. Admin-created accounts can use the Admin, Teacher, or Student role. Backend middleware enforces roles and course ownership; frontend route protection and role-aware navigation are additional UX safeguards. Login sends each role to its starting page. The client persists the JWT in local storage and validates it through `/api/auth/me` on refresh; logout clears the token and cached API state.
 
-## API reference
+## API documentation and Postman
 
-The full method/path/auth/body/response/error reference is in [docs/api.md](docs/api.md). Success responses use `{ success, message, data }`; errors use `{ success: false, message, data: {} }`. Protected calls use `Authorization: Bearer <token>`.
+- API reference: [docs/api.md](docs/api.md)
+- Postman collection: [Course-Enrollment-System.postman_collection.json](docs/postman/Course-Enrollment-System.postman_collection.json)
+- Postman environment template: [Course-Enrollment-System.postman_environment.json](docs/postman/Course-Enrollment-System.postman_environment.json)
+
+For local API work:
+
+1. Start MongoDB and configure `apps/api/.env` from `apps/api/.env.example` (`PORT`, `CORS_ORIGIN`, `MONGODB_URI`, `JWT_SECRET`, and optional `JWT_EXPIRES_IN`). Use a private `JWT_SECRET` of at least 32 characters. Configure the three `SEED_*` email/password pairs only if you intend to run the demo seed.
+2. From the repository root, start the backend with `npm run dev:api`. The default base URL is `http://localhost:4000`.
+3. In Postman, import the collection JSON and the environment JSON, then select the imported environment. Set `baseUrl` if your API uses another address. The token and ID variables are filled by login and create request scripts; alternatively register a Student and log in.
+4. To get role-specific access, log in as an active account and save the returned token to `adminToken`, `teacherToken`, or `studentToken` in the selected environment. Seed demo identities are optional; the explicit seed command and safeguards are described above.
+5. Run the protected requests with the matching role token. The collection uses bearer authorization and Postman variables; it contains no real credentials or JWT secrets.
+
+Success responses use `{ success, message, data }`; errors use `{ success: false, message, data: {} }`.
 
 ## Checks
 
